@@ -82,6 +82,7 @@ impl CircleContract {
             started_at: 0,
             current_cycle: 0,
             slashed_total: 0,
+            ended_at: 0,
         };
         write_circle(&env, id, &circle);
         write_members(&env, id, &vec![&env, creator.clone()]);
@@ -201,6 +202,7 @@ impl CircleContract {
             }
         }
         circle.status = CircleStatus::Cancelled;
+        circle.ended_at = env.ledger().timestamp();
         write_circle(&env, circle_id, &circle);
         events::cancel(&env, circle_id);
     }
@@ -346,6 +348,7 @@ impl CircleContract {
         }
         if done {
             circle.status = CircleStatus::Completed;
+            circle.ended_at = now;
             for m in members.iter() {
                 let mut st = read_member(&env, circle_id, &m);
                 if !st.defaulted {

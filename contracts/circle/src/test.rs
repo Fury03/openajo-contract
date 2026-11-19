@@ -106,6 +106,40 @@ fn full_lifecycle_3_members_3_cycles() {
     assert_eq!(f.token.balance(&f.client.address), 0);
 }
 
+#[test]
+fn completion_records_ended_at() {
+    let f = setup();
+    f.env.ledger().with_mut(|l| l.timestamp = 10_000);
+    let id = create_full_circle(&f);
+    let circle = f.client.get_circle(&id);
+    assert_eq!(circle.started_at, 10_000);
+    assert_eq!(circle.ended_at, 0);
+
+    for _cycle in 0..2u32 {
+        for m in f.members.iter() {
+            f.client.contribute(&id, m);
+        }
+        f.client.settle_cycle(&id);
+        assert_eq!(f.client.get_circle(&id).ended_at, 0);
+    }
+
+    // The final settlement happens before the last deadline.
+    let settled_at = 10_000 + 2 * PERIOD + 7;
+    f.env.ledger().with_mut(|l| l.timestamp = settled_at);
+    for m in f.members.iter() {
+        f.client.contribute(&id, m);
+    }
+    f.client.settle_cycle(&id);
+
+    let circle = f.client.get_circle(&id);
+    assert_eq!(circle.status, CircleStatus::Completed);
+    assert_eq!(circle.ended_at, settled_at);
+    for m in f.members.iter() {
+        assert_eq!(f.token.balance(m), 1_000);
+    }
+    assert_eq!(f.token.balance(&f.client.address), 0);
+}
+
 // ---- Slashing and defaults ------------------------------------------------
 
 #[test]
@@ -262,6 +296,29 @@ fn leave_refunds_and_cancel_refunds_all() {
     assert_eq!(f.client.get_circle(&id).status, CircleStatus::Cancelled);
     assert_eq!(f.token.balance(a), 1_000);
     assert_eq!(f.token.balance(c), 1_000);
+    assert_eq!(f.token.balance(&f.client.address), 0);
+}
+
+#[test]
+fn cancel_records_ended_at() {
+    let f = setup();
+    let [a, b, _] = &f.members;
+    f.env.ledger().with_mut(|l| l.timestamp = 5_000);
+    let id = f
+        .client
+        .create_circle(a, &f.token.address, &CONTRIB, &DEPOSIT, &3, &PERIOD);
+    f.client.join(&id, b);
+    assert_eq!(f.client.get_circle(&id).ended_at, 0);
+
+    f.env.ledger().with_mut(|l| l.timestamp = 6_000);
+    f.client.cancel(&id, a);
+
+    let circle = f.client.get_circle(&id);
+    assert_eq!(circle.status, CircleStatus::Cancelled);
+    assert_eq!(circle.started_at, 0);
+    assert_eq!(circle.ended_at, 6_000);
+    assert_eq!(f.token.balance(a), 1_000);
+    assert_eq!(f.token.balance(b), 1_000);
     assert_eq!(f.token.balance(&f.client.address), 0);
 }
 

@@ -57,6 +57,8 @@ pub struct Circle {
     /// Sum of every slash taken from members' deposits by `settle_cycle`,
     /// raw token units. 0 until the first missed contribution.
     pub slashed_total: i128,
+    /// Ledger timestamp at completion or cancellation; 0 while Open or Active.
+    pub ended_at: u64,
 }
 
 #[contracttype]
