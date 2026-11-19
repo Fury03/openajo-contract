@@ -81,6 +81,7 @@ impl CircleContract {
             status: CircleStatus::Open,
             started_at: 0,
             current_cycle: 0,
+            slashed_total: 0,
         };
         write_circle(&env, id, &circle);
         write_members(&env, id, &vec![&env, creator.clone()]);
@@ -279,6 +280,7 @@ impl CircleContract {
                 if slash > 0 {
                     st.deposit_remaining -= slash;
                     pot += slash;
+                    circle.slashed_total += slash;
                     events::slash(&env, circle_id, &m, slash);
                 }
                 if slash < circle.contribution {

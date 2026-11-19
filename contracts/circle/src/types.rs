@@ -54,6 +54,9 @@ pub struct Circle {
     pub started_at: u64,
     /// 0-based.
     pub current_cycle: u32,
+    /// Sum of every slash taken from members' deposits by `settle_cycle`,
+    /// raw token units. 0 until the first missed contribution.
+    pub slashed_total: i128,
 }
 
 #[contracttype]

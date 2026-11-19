@@ -168,6 +168,47 @@ fn insufficient_deposit_marks_default_and_skips_rotation() {
 }
 
 #[test]
+fn slashed_total_accumulates_across_cycles() {
+    let f = setup();
+    let [a, b, c] = &f.members;
+    let id = create_full_circle(&f);
+    assert_eq!(f.client.get_circle(&id).slashed_total, 0);
+
+    // Cycle 0: everyone pays, nothing slashed; a receives 300.
+    for m in f.members.iter() {
+        f.client.contribute(&id, m);
+    }
+    f.client.settle_cycle(&id);
+    assert_eq!(f.client.get_circle(&id).slashed_total, 0);
+
+    // Cycle 1: c misses and is slashed 100 of 150; b receives 300.
+    f.client.contribute(&id, a);
+    f.client.contribute(&id, b);
+    advance_past_deadline(&f, id);
+    f.client.settle_cycle(&id);
+    assert_eq!(f.client.get_circle(&id).slashed_total, CONTRIB);
+
+    // Cycle 2: c misses again; the last 50 is slashed and c defaults. a and
+    // b have both received, so the 250 pot goes back to them, 125 each.
+    f.client.contribute(&id, a);
+    f.client.contribute(&id, b);
+    advance_past_deadline(&f, id);
+    f.client.settle_cycle(&id);
+
+    let circle = f.client.get_circle(&id);
+    assert_eq!(circle.status, CircleStatus::Completed);
+    assert_eq!(circle.slashed_total, DEPOSIT);
+    assert_eq!(f.client.get_member(&id, c).deposit_remaining, 0);
+
+    // Exact balances: a: -150 -300 +300 +125 +150 = +125;
+    // b: -150 -300 +300 +125 +150 = +125; c: -150 -100 = -250.
+    assert_eq!(f.token.balance(a), 1_125);
+    assert_eq!(f.token.balance(b), 1_125);
+    assert_eq!(f.token.balance(c), 750);
+    assert_eq!(f.token.balance(&f.client.address), 0);
+}
+
+#[test]
 fn recipient_defaults_after_receiving_loses_deposit() {
     let f = setup();
     let [a, b, c] = &f.members;

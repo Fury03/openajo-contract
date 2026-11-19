@@ -109,6 +109,7 @@ struct Circle {
     status: CircleStatus,
     started_at: u64,       // 0 while Open
     current_cycle: u32,    // 0-based
+    slashed_total: i128,   // raw units, sum of all slashes in settle_cycle
 }
 
 struct MemberState {
