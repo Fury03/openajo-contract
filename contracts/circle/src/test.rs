@@ -322,6 +322,32 @@ fn cancel_records_ended_at() {
     assert_eq!(f.token.balance(&f.client.address), 0);
 }
 
+#[test]
+fn cancel_zeroes_refunded_deposits() {
+    let f = setup();
+    let [a, b, c] = &f.members;
+    let id = f
+        .client
+        .create_circle(a, &f.token.address, &CONTRIB, &DEPOSIT, &3, &PERIOD);
+    f.client.join(&id, b);
+    assert_eq!(f.client.get_member(&id, a).deposit_remaining, DEPOSIT);
+    assert_eq!(f.client.get_member(&id, b).deposit_remaining, DEPOSIT);
+    assert_eq!(f.token.balance(&f.client.address), 2 * DEPOSIT);
+
+    f.client.cancel(&id, a);
+
+    // Every refunded member's record now shows nothing left in escrow.
+    for m in [a, b] {
+        let st = f.client.get_member(&id, m);
+        assert_eq!(st.deposit_remaining, 0);
+        assert!(!st.received);
+        assert!(!st.defaulted);
+        assert_eq!(f.token.balance(m), 1_000);
+    }
+    assert_eq!(f.token.balance(c), 1_000);
+    assert_eq!(f.token.balance(&f.client.address), 0);
+}
+
 // ---- Error paths ----------------------------------------------------------
 
 #[test]

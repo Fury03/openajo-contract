@@ -57,8 +57,9 @@ Reverts: `NotMember`, `IsCreator` (the creator cancels instead), `BadStatus`.
 
 ### `cancel(circle_id, creator)`
 
-The creator cancels an `Open` circle, refunding every member's deposit. Moves the
-circle to `Cancelled`. Requires `creator` auth.
+The creator cancels an `Open` circle, refunding every member's deposit. Each
+refunded member's `deposit_remaining` is set to `0`, so `get_member` reflects the
+refund. Moves the circle to `Cancelled`. Requires `creator` auth.
 
 Reverts: `NotCreator`, `BadStatus`.
 

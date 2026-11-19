@@ -192,13 +192,15 @@ impl CircleContract {
         let members = read_members(&env, circle_id);
         let tok = token::Client::new(&env, &circle.token);
         for m in members.iter() {
-            let state = read_member(&env, circle_id, &m);
+            let mut state = read_member(&env, circle_id, &m);
             if state.deposit_remaining > 0 {
                 tok.transfer(
                     &env.current_contract_address(),
                     &m,
                     &state.deposit_remaining,
                 );
+                state.deposit_remaining = 0;
+                write_member(&env, circle_id, &m, &state);
             }
         }
         circle.status = CircleStatus::Cancelled;
